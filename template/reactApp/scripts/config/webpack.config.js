@@ -1,10 +1,8 @@
-'use strict';
-
 const fs = require('fs');
 const path = require('path');
 const webpack = require('webpack');
 const resolve = require('resolve');
-const PnpWebpackPlugin = require('pnp-webpack-plugin'); // todo
+// const PnpWebpackPlugin = require('pnp-webpack-plugin'); // todo
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
@@ -20,19 +18,17 @@ const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin'); // todo
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
 const DirectoryNamedWebpackPlugin = require('directory-named-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin'); // todo
-const paths = require('./paths');
-const getClientEnvironment = require('./env');
 const ImageminPlugin = require('imagemin-webpack-plugin').default;
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
-// const getPublicUrlOrPath = require('react-dev-utils/getPublicUrlOrPath');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin'); // todo
 const postcssNormalize = require('postcss-normalize'); // todo
-
 const htmlAttrsOptions = require('./htmlAttrsOptions');
+const paths = require('./paths');
+const getClientEnvironment = require('./env');
 
-const appPackageJson = require(paths.appPackageJson); // todo === pkg
+const pkg = require(paths.appPackageJson);
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
@@ -40,7 +36,6 @@ const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
 // const shouldUseSourceMap = isEnvProduction
 // ? process.env.GENERATE_SOURCEMAP === 'true'
 // : process.env.GENERATE_SOURCEMAP !== 'false';
-
 
 // todo
 const webpackDevClientEntry = require.resolve(
@@ -53,7 +48,6 @@ const reactRefreshOverlayEntry = require.resolve(
 // Some apps do not need the benefits of saving a web request, so not inlining the chunk
 // makes for a smoother build process.
 const shouldInlineRuntimeChunk = process.env.INLINE_RUNTIME_CHUNK !== 'false'; // todo
-
 
 // todo
 const imageInlineSizeLimit = parseInt(
@@ -85,6 +79,7 @@ const hasJsxRuntime = (() => {
 
     try {
         require.resolve('react/jsx-runtime');
+
         return true;
     } catch (e) {
         return false;
@@ -105,7 +100,7 @@ module.exports = function(webpackEnv) {
     const isEnvProductionProfile =
         isEnvProduction && process.argv.includes('--profile');
 
-    // const shouldUseSW = process.env.GENERATE_SW === 'true' || !!pkg.pwa;
+    const shouldUseSW = process.env.GENERATE_SW === 'true' || !!pkg.pwa;
 
     // We will provide `paths.publicUrlOrPath` to our app
     // as %PUBLIC_URL% in `index.html` and `process.env.PUBLIC_URL` in JavaScript.
@@ -117,7 +112,6 @@ module.exports = function(webpackEnv) {
     });
 
     const shouldUseReactRefresh = env.raw.FAST_REFRESH; // todo
-
 
     const babelOption = {
         babelrc: false,
@@ -140,12 +134,13 @@ module.exports = function(webpackEnv) {
                 // css is located in `static/css`, use '../../' to locate index.html folder
                 // in production `paths.publicUrlOrPath` can be a relative path
                 options: paths.publicUrlOrPath.startsWith('.')
-                    ? { publicPath: '../../' }
-                    : {},
+                    ? { publicPath: '../../', esModule: true }
+                    : { esModule: true },
             },
             {
                 loader: require.resolve('css-loader'),
-                options: { sourceMap: isEnvProduction ? shouldUseSourceMap : isEnvDevelopment, ...cssOptions },
+                // options: { sourceMap: isEnvProduction ? shouldUseSourceMap : isEnvDevelopment, ...cssOptions },
+                options: Object.assign({ sourceMap: shouldUseSourceMap }, cssOptions)
             },
             {
                 // Options for PostCSS as we reference these options twice
@@ -202,11 +197,13 @@ module.exports = function(webpackEnv) {
                 }
             );
         }
+
         return loaders;
     };
 
     // 多页面模板分离支持
     const getMultiHtmlInjects = () => {
+        // eslint-disable-next-line
         const matchScriptStylePattern = /<\!--\s*script:\s*([\w]+)(?:\.[jt]sx?)?\s*-->/g;
         const htmlInjects = [];
 
@@ -263,6 +260,7 @@ module.exports = function(webpackEnv) {
     }
 
     return {
+        name: 'aura',
         mode: isEnvProduction ? 'production' : isEnvDevelopment && 'development',
         // Stop compilation early in production
         bail: isEnvProduction,
@@ -286,7 +284,7 @@ module.exports = function(webpackEnv) {
         // target: 'web', // 构建目标 'web' 或 'node'，默认是 'web' 可省略
         output: {
             // The build folder.
-            path: isEnvProduction ? paths.appBuild : undefined, // ! dev时设为undefined，猜测是因为热更新时直接输出到内存中了
+            path: isEnvProduction ? paths.appBuild : paths.appBuild, // ! dev时设为undefined，猜测是因为热更新时直接输出到内存中了
             // Add /* filename */ comments to generated require()s in the output.
             pathinfo: isEnvDevelopment,
             // There will be one main bundle, and one file per asynchronous chunk.
@@ -310,7 +308,7 @@ module.exports = function(webpackEnv) {
                 : isEnvDevelopment && (info => path.resolve(info.absoluteResourcePath).replace(/\\/g, '/')),
             // Prevents conflicts when multiple webpack runtimes (from different apps)
             // are used on the same page.
-            jsonpFunction: `webpackJsonp${appPackageJson.name}`,
+            jsonpFunction: `webpackJsonp${pkg.name}`,
             // this defaults to 'window', but by setting it to 'this' then
             // module chunks which are built will work in web workers as well.
             globalObject: 'this',
@@ -436,26 +434,26 @@ module.exports = function(webpackEnv) {
                 }),
                 // Adds support for installing with Plug'n'Play, leading to faster installs and adding
                 // guards against forgotten dependencies and such.
-                PnpWebpackPlugin,
+                // PnpWebpackPlugin, // !
                 // Prevents users from importing files from outside of src/ (or node_modules/).
                 // This often causes confusion because we only process files within src/ with babel.
                 // To fix this, we prevent you from importing files out of src/ -- if you'd like to,
                 // please link the files into your node_modules/ and let module-resolution kick in.
                 // Make sure your source files are compiled, as they will not be processed in any way.
                 new ModuleScopePlugin(paths.appSrc, [
-                    paths.appPackageJson,
+                    paths.pkg,
                     reactRefreshOverlayEntry,
                 ]),
             ],
         },
-        // 仅用于解析 webpack 的 loader 包
-        resolveLoader: {
-            plugins: [
-                // Also related to Plug'n'Play, but this time it tells webpack to load its loaders
-                // from the current package.
-                PnpWebpackPlugin.moduleLoader(module),
-            ],
-        },
+        // // 仅用于解析 webpack 的 loader 包
+        // resolveLoader: {
+        //     plugins: [
+        //         // Also related to Plug'n'Play, but this time it tells webpack to load its loaders
+        //         // from the current package.
+        //         PnpWebpackPlugin.moduleLoader(module),
+        //     ],
+        // },
         module: {
             strictExportPresence: true, // makes missing exports an error instead of warning
             rules: [
@@ -490,7 +488,7 @@ module.exports = function(webpackEnv) {
                             options: {
                                 limit: imageInlineSizeLimit,
                                 mimetype: 'image/avif',
-                                name: 'static/media/[name].[hash:8].[ext]',
+                                name: 'static/images/[name].[hash:8].[ext]',
                             },
                         },
                         // "url" loader works like "file" loader except that it embeds assets
@@ -501,10 +499,10 @@ module.exports = function(webpackEnv) {
                             loader: require.resolve('url-loader'),
                             options: {
                                 limit: imageInlineSizeLimit,
-                                name: 'static/media/[name].[hash:8].[ext]',
+                                name: 'static/images/[name].[hash:8].[ext]',
                             },
                         },
-                        { // ! 这部分不知道在哪找处理方法
+                        {
                             test: /\.html$/,
                             use: [
                                 {
@@ -714,7 +712,7 @@ module.exports = function(webpackEnv) {
             new InterpolateHtmlPlugin(HtmlWebpackPlugin, env.raw),
             // This gives some necessary context to module not found errors, such as
             // the requesting resource.
-            new ModuleNotFoundPlugin(paths.appPath), // ! 这里有差异
+            new ModuleNotFoundPlugin(paths.root),
             // Makes some environment variables available to the JS code, for example:
             // if (process.env.NODE_ENV === 'production') { ... }. See `./env.js`.
             // It is absolutely essential that NODE_ENV is set to production
@@ -725,19 +723,19 @@ module.exports = function(webpackEnv) {
             isEnvDevelopment && new webpack.HotModuleReplacementPlugin(),
             // Experimental hot reloading for React .
             // https://github.com/facebook/react/tree/master/packages/react-refresh
-            isEnvDevelopment &&
-            shouldUseReactRefresh &&
-            new ReactRefreshWebpackPlugin({
-                overlay: {
-                    entry: webpackDevClientEntry,
-                    // The expected exports are slightly different from what the overlay exports,
-                    // so an interop is included here to enable feedback on module-level errors.
-                    module: reactRefreshOverlayEntry,
-                    // Since we ship a custom dev client and overlay integration,
-                    // the bundled socket handling logic can be eliminated.
-                    sockIntegration: false,
-                },
-            }),
+            // isEnvDevelopment &&
+            // shouldUseReactRefresh &&
+            // new ReactRefreshWebpackPlugin({
+            //     overlay: {
+            //         entry: webpackDevClientEntry,
+            //         // The expected exports are slightly different from what the overlay exports,
+            //         // so an interop is included here to enable feedback on module-level errors.
+            //         module: reactRefreshOverlayEntry,
+            //         // Since we ship a custom dev client and overlay integration,
+            //         // the bundled socket handling logic can be eliminated.
+            //         sockIntegration: false,
+            //     },
+            // }),
             // Watcher doesn't work well if you mistype casing in a path so we use
             // a plugin that prints an error when you attempt to do this.
             // See https://github.com/facebook/create-react-app/issues/240
@@ -769,25 +767,26 @@ module.exports = function(webpackEnv) {
             //   `index.html`
             // - "entrypoints" key: Array of files which are included in `index.html`,
             //   can be used to reconstruct the HTML if necessary
-            // ! 感觉生成manifest.json清单可能是不必要的，貌似这个插件是生成了实体文件，不用插件也会有这个manifest映射关系，有了json主要是给服务端渲染用的？
-            new ManifestPlugin({
-                fileName: 'asset-manifest.json',
-                publicPath: paths.publicUrlOrPath,
-                generate: (seed, files, entrypoints) => {
-                    const manifestFiles = files.reduce((manifest, file) => {
-                        manifest[file.name] = file.path;
-                        return manifest;
-                    }, seed);
-                    const entrypointFiles = entrypoints.main.filter(
-                        fileName => !fileName.endsWith('.map')
-                    );
+            // // ! 感觉生成manifest.json清单可能是不必要的，貌似这个插件是生成了实体文件，不用插件也会有这个manifest映射关系，有了json主要是给服务端渲染用的？
+            // new ManifestPlugin({
+            //     fileName: 'asset-manifest.json',
+            //     publicPath: paths.publicUrlOrPath,
+            //     generate: (seed, files, entrypoints) => {
+            //         const manifestFiles = files.reduce((manifest, file) => {
+            //             manifest[file.name] = file.path;
 
-                    return {
-                        files: manifestFiles,
-                        entrypoints: entrypointFiles,
-                    };
-                },
-            }),
+            //             return manifest;
+            //         }, seed);
+            //         const entrypointFiles = entrypoints.main.filter(
+            //             fileName => !fileName.endsWith('.map')
+            //         );
+
+            //         return {
+            //             files: manifestFiles,
+            //             entrypoints: entrypointFiles,
+            //         };
+            //     },
+            // }),
             // Moment.js is an extremely popular library that bundles large locale files
             // by default due to how webpack interprets its code. This is a practical
             // solution that requires the user to opt into importing specific locales.
@@ -820,12 +819,12 @@ module.exports = function(webpackEnv) {
                 useTypescriptIncrementalApi: true, // Defaults to true when working with TypeScript 3+，
                 measureCompilationTime: true,
                 checkSyntacticErrors: true, // true, ensure that the plugin checks for both syntactic errors and semantic errors
-                resolveModuleNameModule: process.versions.pnp
-                    ? `${__dirname}/pnpTs.js`
-                    : undefined,
-                resolveTypeReferenceDirectiveModule: process.versions.pnp
-                    ? `${__dirname}/pnpTs.js`
-                    : undefined,
+                // resolveModuleNameModule: process.versions.pnp
+                //     ? `${__dirname}/pnpTs.js`
+                //     : undefined,
+                // resolveTypeReferenceDirectiveModule: process.versions.pnp
+                //     ? `${__dirname}/pnpTs.js`
+                //     : undefined,
                 tsconfig: paths.appTsConfig, // ! 这里用的ts配置文件不同
                 compilerOptions: {
                     jsx: hasJsxRuntime ? (isEnvProduction ? 'react-jsx' : 'react-jsxdev') : 'preserve',
@@ -859,7 +858,7 @@ module.exports = function(webpackEnv) {
                     '.cache/.eslintcache'
                 ),
                 // ESLint class options https://eslint.org/docs/developer-guide/nodejs-api#parameters
-                cwd: paths.appPath,
+                cwd: paths.root,
                 resolvePluginsRelativeTo: __dirname,
                 baseConfig: {
                     extends: [require.resolve('eslint-config-react-app/base')],
@@ -879,6 +878,8 @@ module.exports = function(webpackEnv) {
         // Some libraries import Node modules but don't use them in the browser.
         // Tell webpack to provide empty mocks for them so importing them works.
         node: {
+            __filename: true,
+            __dirname: true,
             module: 'empty',
             dgram: 'empty',
             dns: 'mock',

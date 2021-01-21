@@ -2,7 +2,9 @@
 
 const path = require('path');
 const fs = require('fs');
+const glob = require('glob');
 const getPublicUrlOrPath = require('react-dev-utils/getPublicUrlOrPath');
+const lodash = require('lodash');
 
 // Make sure any symlinks in the project folder are resolved:
 // https://github.com/facebook/create-react-app/issues/637
@@ -78,6 +80,7 @@ glob.sync(resolveApp('public/!(_)*.html')).forEach(function(file) {
 
 module.exports = {
     dotenv: resolveApp('.env'),
+    root: resolveApp(''),
     appPath: resolveApp('.'),
     appBuild: resolveApp(process.env.BUILD_DIR || 'build'),
     appPublic: resolveApp('public'),

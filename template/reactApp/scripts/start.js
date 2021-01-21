@@ -1,5 +1,3 @@
-'use strict';
-
 // Do this as the first thing so that any code reading it knows the right env.
 // ! 设置了两个环境变量，因为 start 是用来跑开发的，所以这里的环境变量都是 development
 process.env.BABEL_ENV = 'development';
@@ -14,7 +12,7 @@ process.on('unhandledRejection', err => {
 });
 
 // Ensure environment variables are read.
-require('../config/env');
+require('./config/env');
 
 const fs = require('fs');
 const chalk = require('react-dev-utils/chalk');
@@ -25,17 +23,17 @@ const clearConsole = require('react-dev-utils/clearConsole');
 const ora = require('ora'); // todo
 
 const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
+
+const openBrowser = require('react-dev-utils/openBrowser');
+const { checkBrowsers } = require('react-dev-utils/browsersHelper');
 const {
     choosePort,
     createCompiler,
     prepareProxy,
     prepareUrls,
 } = require('./config/rewiredWebpackDevServerUtils');
-
-const openBrowser = require('react-dev-utils/openBrowser');
-const { checkBrowsers } = require('react-dev-utils/browsersHelper');
 const paths = require('./config/paths'); // ! 在env.js里面delete掉node.cache，这里const paths = require('../config/paths)就不会从缓存里面去拿而是重新去加载
-const configFactory = require('../config/webpack.config');
+const configFactory = require('./config/webpack.config');
 
 const checkMissDependencies = require('./config/checkMissDependencies');
 const createDevServerConfig = require('./config/rewiredWebpackDevServer.config');
@@ -65,7 +63,7 @@ checkMissDependencies(spinner).then(() => {
         .then(() => {
             // We attempt to use the default port but if it is busy, we offer the user to
             // run on a different port. `choosePort()` Promise resolves to the next free port.
-            return choosePort(HOST, DEFAULT_PORT); // ! 判断这个端口有没有被其他的进程占用，有的话会提供下一个可用的端口
+            return choosePort(HOST, DEFAULT_PORT, spinner); // ! 判断这个端口有没有被其他的进程占用，有的话会提供下一个可用的端口
         })
         .then(port => {
             if (port == null) {
@@ -108,6 +106,7 @@ checkMissDependencies(spinner).then(() => {
             // ! 生成一个 webpackCompiler
             const compiler = createCompiler({
                 appName,
+                // config: paths.useNodeEnv ? [config, nodeConfig] : [config], // ! 注意，如果这里传入数组，会生成 multicompiler，需要遍历 https://webpack.docschina.org/api/node/#multicompiler
                 config,
                 urls,
                 useYarn,
@@ -115,6 +114,7 @@ checkMissDependencies(spinner).then(() => {
                 devSocket,
                 useTypeScript,
                 tscCompileOnError,
+                spinner
             });
             // Load proxy config
             // ! 加载代理的配置，在 project_path/package.json 里面加载配置
@@ -131,6 +131,7 @@ checkMissDependencies(spinner).then(() => {
                 urls.lanUrlForConfig
             );
             const devServer = new WebpackDevServer(compiler, serverConfig);
+
             // Launch WebpackDevServer.
             devServer.listen(port, HOST, err => {
                 // ! 监听 devServer
@@ -138,6 +139,7 @@ checkMissDependencies(spinner).then(() => {
                 if (err) {
                     return console.log(err);
                 }
+
                 if (isInteractive) {
                     clearConsole();
                 }
@@ -174,5 +176,4 @@ checkMissDependencies(spinner).then(() => {
             // process.kill(process.pid, 'SIGINT');
             process.exit(1);
         });
-
 })
