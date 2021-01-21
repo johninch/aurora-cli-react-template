@@ -135,7 +135,6 @@ function createCompiler({
     let isFirstCompile = true;
     let tsMessagesPromise;
     let tsMessagesResolver;
-    let tsCompilerIndex;
 
     if (useTypeScript) {
         // https://webpack.docschina.org/api/node/
@@ -144,27 +143,30 @@ function createCompiler({
             tsMessagesPromise = new Promise(resolve => {
                 tsMessagesResolver = msgs => resolve(msgs);
             });
-
-            tsCompilerIndex = index;
         });
 
         forkTsCheckerWebpackPlugin
             .getCompilerHooks(compiler)
             .receive.tap('afterTypeScriptCheck', (diagnostics, lints) => {
                 const allMsgs = [...diagnostics, ...lints];
-                const format = message => `${message.file}\n${typescriptFormatter(message, true)}`;
+                const format = message =>
+                    `${message.file}\n${typescriptFormatter(message, true)}`;
 
-                tsCompilerIndex === index &&
-                    tsMessagesResolver({
-                        errors: allMsgs.filter(msg => msg.severity === 'error').map(format),
-                        warnings: allMsgs.filter(msg => msg.severity === 'warning').map(format)
-                    });
+                tsMessagesResolver({
+                    errors: allMsgs
+                        .filter(msg => msg.severity === 'error')
+                        .map(format),
+                    warnings: allMsgs
+                        .filter(msg => msg.severity === 'warning')
+                        .map(format),
+                });
             });
     }
 
     // "done" event fires when webpack has finished recompiling the bundle.
     // Whether or not you have warnings or errors, you will get this event.
     compiler.hooks.done.tap('done', async stats => {
+        // ! 如果是多个compiler，则这里的回调也是多个 { stats: [stats, ...otherStats]
         // ! 监听了 done 事件，对输出的日志做了格式化输出
         // ! 正常情况下会直接输出 `Compiled successfully!`
         // ! 如果有错误则输出错误信息，这里对错误信息做一些处理，让其输出比较友好
@@ -188,11 +190,6 @@ function createCompiler({
 
         if (useTypeScript && statsData.errors.length === 0) {
             const delayedMsg = setTimeout(() => {
-                // console.log(
-                //     chalk.yellow(
-                //         'Files successfully emitted, waiting for typecheck results...'
-                //     )
-                // );
                 spinner.text = chalk.cyan('文件已编译，正在进行TSC检查...') + useTimer();
             }, 100);
 
@@ -234,10 +231,10 @@ function createCompiler({
         }
 
         const messages = formatWebpackMessages(statsData);
+
         const isSuccessful = !messages.errors.length && !messages.warnings.length;
 
         if (isSuccessful) {
-            // console.log(chalk.green('Compiled successfully!'));
             spinner.succeed(chalk.green(`编译完成！${useTimer(true)}`));
         }
 

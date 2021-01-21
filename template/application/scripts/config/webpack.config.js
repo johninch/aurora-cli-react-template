@@ -10,7 +10,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const safePostCssParser = require('postcss-safe-parser');
-const ManifestPlugin = require('webpack-manifest-plugin');
+// const ManifestPlugin = require('webpack-manifest-plugin');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
@@ -22,7 +22,7 @@ const ImageminPlugin = require('imagemin-webpack-plugin').default;
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin'); // todo
+// const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin'); // todo
 const postcssNormalize = require('postcss-normalize'); // todo
 const htmlAttrsOptions = require('./htmlAttrsOptions');
 const paths = require('./paths');
@@ -712,7 +712,7 @@ module.exports = function(webpackEnv) {
             new InterpolateHtmlPlugin(HtmlWebpackPlugin, env.raw),
             // This gives some necessary context to module not found errors, such as
             // the requesting resource.
-            new ModuleNotFoundPlugin(paths.root),
+            new ModuleNotFoundPlugin(paths.root), // ! 这里有差异
             // Makes some environment variables available to the JS code, for example:
             // if (process.env.NODE_ENV === 'production') { ... }. See `./env.js`.
             // It is absolutely essential that NODE_ENV is set to production
@@ -817,7 +817,7 @@ module.exports = function(webpackEnv) {
                 }),
                 async: isEnvDevelopment, // true，则在webpack编译完成后报告问题，不影响 webpack 的编译；为 false，同步的将错误信息反馈给 webpack，如果报错了，webpack 就会编译失败
                 useTypescriptIncrementalApi: true, // Defaults to true when working with TypeScript 3+，
-                measureCompilationTime: true,
+                // measureCompilationTime: true, // ! 暂时不输出耗时
                 checkSyntacticErrors: true, // true, ensure that the plugin checks for both syntactic errors and semantic errors
                 // resolveModuleNameModule: process.versions.pnp
                 //     ? `${__dirname}/pnpTs.js`

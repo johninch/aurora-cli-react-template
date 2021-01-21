@@ -26,6 +26,7 @@ const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
 
 const openBrowser = require('react-dev-utils/openBrowser');
 const { checkBrowsers } = require('react-dev-utils/browsersHelper');
+
 const {
     choosePort,
     createCompiler,
@@ -59,7 +60,7 @@ const spinner = ora('webpack启动中...').start();
 // browserslist defaults.
 
 checkMissDependencies(spinner).then(() => {
-    return checkBrowsers(paths.appPath, isInteractive)
+    return checkBrowsers(paths.root, isInteractive)
         .then(() => {
             // We attempt to use the default port but if it is busy, we offer the user to
             // run on a different port. `choosePort()` Promise resolves to the next free port.
@@ -82,6 +83,7 @@ checkMissDependencies(spinner).then(() => {
 
             // ! 把环境变量和配置组装起来，开个webpack本地调试服务
             const config = configFactory('development');
+
             const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
             const appName = pkg.name;
 
@@ -116,6 +118,7 @@ checkMissDependencies(spinner).then(() => {
                 tscCompileOnError,
                 spinner
             });
+
             // Load proxy config
             // ! 加载代理的配置，在 project_path/package.json 里面加载配置
             const proxySetting = pkg.proxy;
@@ -130,6 +133,7 @@ checkMissDependencies(spinner).then(() => {
                 proxyConfig,
                 urls.lanUrlForConfig
             );
+
             const devServer = new WebpackDevServer(compiler, serverConfig);
 
             // Launch WebpackDevServer.
@@ -144,7 +148,7 @@ checkMissDependencies(spinner).then(() => {
                     clearConsole();
                 }
 
-                console.log(chalk.cyan('Starting the development server...\n'));
+                console.log(chalk.cyan('正在启动测试服务器...\n'));
                 // ! 自动用默认浏览器打开调试链接
                 openBrowser(urls.localUrlForBrowser);
             });
