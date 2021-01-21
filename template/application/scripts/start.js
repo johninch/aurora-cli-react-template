@@ -148,6 +148,14 @@ checkMissDependencies(spinner).then(() => {
                     clearConsole();
                 }
 
+                if (env.raw.FAST_REFRESH && semver.lt(react.version, '16.10.0')) {
+                    console.log(
+                        chalk.yellow(
+                            `Fast Refresh 需要 React版本 在 16.10及以上。你当前使用的 React版本 为 ${react.version}。`
+                        )
+                    );
+                }
+
                 console.log(chalk.cyan('正在启动测试服务器...\n'));
                 // ! 自动用默认浏览器打开调试链接
                 openBrowser(urls.localUrlForBrowser);

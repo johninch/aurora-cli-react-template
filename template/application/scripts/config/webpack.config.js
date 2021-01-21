@@ -22,28 +22,21 @@ const ImageminPlugin = require('imagemin-webpack-plugin').default;
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
-// const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin'); // todo
-const postcssNormalize = require('postcss-normalize'); // todo
-const htmlAttrsOptions = require('./htmlAttrsOptions');
-const paths = require('./paths');
-const getClientEnvironment = require('./env');
 
-const pkg = require(paths.appPackageJson);
-
-// Source maps are resource heavy and can cause out of memory issue for large source files.
-const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
-
-// const shouldUseSourceMap = isEnvProduction
-// ? process.env.GENERATE_SOURCEMAP === 'true'
-// : process.env.GENERATE_SOURCEMAP !== 'false';
-
-// todo
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const webpackDevClientEntry = require.resolve(
     'react-dev-utils/webpackHotDevClient'
 );
 const reactRefreshOverlayEntry = require.resolve(
     'react-dev-utils/refreshOverlayInterop'
 );
+
+const postcssNormalize = require('postcss-normalize'); // todo
+const htmlAttrsOptions = require('./htmlAttrsOptions');
+const paths = require('./paths');
+const getClientEnvironment = require('./env');
+
+const pkg = require(paths.appPackageJson);
 
 // Some apps do not need the benefits of saving a web request, so not inlining the chunk
 // makes for a smoother build process.
@@ -92,15 +85,20 @@ module.exports = function(webpackEnv) {
     const isEnvDevelopment = webpackEnv === 'development';
     const isEnvProduction = webpackEnv === 'production';
 
-    // const isEnvNode = paths.useNodeEnv && executionEnv === 'node';
-    // const isEnvWeb = !isEnvNode;
-
     // Variable used for enabling profiling in Production
     // passed into alias object. Uses a flag if passed into the build command
     const isEnvProductionProfile =
         isEnvProduction && process.argv.includes('--profile');
 
+    // Source maps are resource heavy and can cause out of memory issue for large source files.
+    const shouldUseSourceMap = isEnvProduction
+        ? process.env.GENERATE_SOURCEMAP === 'true'
+        : process.env.GENERATE_SOURCEMAP !== 'false';
+
     const shouldUseSW = process.env.GENERATE_SW === 'true' || !!pkg.pwa;
+
+    // const isEnvNode = paths.useNodeEnv && executionEnv === 'node';
+    // const isEnvWeb = !isEnvNode;
 
     // We will provide `paths.publicUrlOrPath` to our app
     // as %PUBLIC_URL% in `index.html` and `process.env.PUBLIC_URL` in JavaScript.
@@ -111,7 +109,7 @@ module.exports = function(webpackEnv) {
         ENABLE_PWA: shouldUseSW
     });
 
-    const shouldUseReactRefresh = env.raw.FAST_REFRESH; // todo
+    const shouldUseReactRefresh = env.raw.FAST_REFRESH;
 
     const babelOption = {
         babelrc: false,
@@ -723,19 +721,19 @@ module.exports = function(webpackEnv) {
             isEnvDevelopment && new webpack.HotModuleReplacementPlugin(),
             // Experimental hot reloading for React .
             // https://github.com/facebook/react/tree/master/packages/react-refresh
-            // isEnvDevelopment &&
-            // shouldUseReactRefresh &&
-            // new ReactRefreshWebpackPlugin({
-            //     overlay: {
-            //         entry: webpackDevClientEntry,
-            //         // The expected exports are slightly different from what the overlay exports,
-            //         // so an interop is included here to enable feedback on module-level errors.
-            //         module: reactRefreshOverlayEntry,
-            //         // Since we ship a custom dev client and overlay integration,
-            //         // the bundled socket handling logic can be eliminated.
-            //         sockIntegration: false,
-            //     },
-            // }),
+            isEnvDevelopment &&
+            shouldUseReactRefresh &&
+            new ReactRefreshWebpackPlugin({
+                overlay: {
+                    entry: webpackDevClientEntry,
+                    // The expected exports are slightly different from what the overlay exports,
+                    // so an interop is included here to enable feedback on module-level errors.
+                    module: reactRefreshOverlayEntry,
+                    // Since we ship a custom dev client and overlay integration,
+                    // the bundled socket handling logic can be eliminated.
+                    sockIntegration: false,
+                },
+            }),
             // Watcher doesn't work well if you mistype casing in a path so we use
             // a plugin that prints an error when you attempt to do this.
             // See https://github.com/facebook/create-react-app/issues/240
