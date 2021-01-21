@@ -1,81 +1,59 @@
-/* eslint @typescript-eslint/no-var-requires: 0 */
+'use strict';
+
 const path = require('path');
-const fs = require('fs-extra');
+const fs = require('fs');
 const glob = require('glob');
-const execSync = require('child_process').execSync;
 const getPublicUrlOrPath = require('react-dev-utils/getPublicUrlOrPath');
-const isDev = process.env.NODE_ENV === 'development';
 const lodash = require('lodash');
 
 // Make sure any symlinks in the project folder are resolved:
-// https://github.com/facebookincubator/create-react-app/issues/637
+// https://github.com/facebook/create-react-app/issues/637
 const appDirectory = fs.realpathSync(process.cwd());
-const nodePaths = (process.env.NODE_PATH || '').split(path.delimiter).filter(Boolean).map(resolveApp);
+const resolveApp = (...relativePath) => path.resolve(appDirectory, ...relativePath);
+
 const pkg = require(resolveApp('package.json'));
-const publicUrlOrPath = getPublicUrlOrPath(
-    process.env.NODE_ENV === 'development' && process.env.WEBPACK_BUILDING !== 'true',
-    pkg.homepage || (pkg.noRewrite ? '.' : undefined),
-    process.env.PUBLIC_URL ||
-        (process.env.NODE_ENV === 'production' && process.env.SKIP_CDN !== 'true' && pkg.cdn
-            ? pkg.cdn.host + pkg.cdn.path
-            : process.env.BASE_NAME)
-);
+
+// We use `PUBLIC_URL` environment variable or "homepage" field to infer
+// "public path" at which the app is served.
+// webpack needs to know it to put the right <script> hrefs into HTML even in
+// single-page apps that may serve index.html for nested URLs like /todos/42.
+// We can't use a relative path in HTML because we don't want to load something
+// like /todos/42/static/js/bundle.7289d.js. We have to know the root.
+const isEnvDevelopment = process.env.NODE_ENV === 'development' && process.env.WEBPACK_BUILDING !== 'true'
+const homepage = pkg.homepage || (pkg.noRewrite ? '.' : undefined)
+const envPublicUrl = process.env.PUBLIC_URL ||
+    (process.env.NODE_ENV === 'production' && process.env.SKIP_CDN !== 'true' && pkg.cdn
+        ? pkg.cdn.host + pkg.cdn.path
+        : process.env.BASE_NAME)
+
+const publicUrlOrPath = getPublicUrlOrPath(isEnvDevelopment, homepage, envPublicUrl);
+
 const moduleFileExtensions = ['mjs', 'js', 'ts', 'tsx', 'jsx'];
-
-const hasJsxRuntime = (() => {
-    if (process.env.DISABLE_NEW_JSX_TRANSFORM === 'true') {
-        return false;
-    }
-
-    try {
-        require.resolve('react/jsx-runtime');
-
-        return true;
-    } catch (e) {
-        return false;
-    }
-})();
-
 const webModuleFileExtensions = moduleFileExtensions.map(ext => `web.${ext}`).concat(moduleFileExtensions, 'json');
-const nodeModuleFileExtensions = moduleFileExtensions.map(ext => `node.${ext}`).concat(moduleFileExtensions, 'json');
+// ['web.mjs', 'web.js', 'web.ts', 'web.tsx', 'web.jsx', 'mjs', 'js', 'ts', 'tsx', 'jsx', 'json']
 
-function resolveApp(...relativePaths) {
-    return path.resolve(appDirectory, ...relativePaths);
-}
 
-const webJSEntries = {};
-const nodeJSEntries = {};
+// Resolve file paths in the same order as webpack
+const resolveModule = (resolveFn, filePath) => {
+    const extension = moduleFileExtensions.find(extension =>
+        fs.existsSync(resolveFn(`${filePath}.${extension}`))
+    );
 
-glob.sync(resolveApp('app/!(_)*.{j,t}s?(x)')).forEach(function(file) {
-    const basename = path.basename(file).replace(/(\.web|\.node)?\.[jt]sx?$/, '');
-
-    if (/\.node\.[jt]sx?$/.test(file)) {
-        nodeJSEntries[basename] = file;
-    } else {
-        webJSEntries[basename] = file;
+    if (extension) {
+        return resolveFn(`${filePath}.${extension}`);
     }
-});
 
-const webHtmlEntries = {};
-const nodeHtmlEntries = {};
+    return resolveFn(`${filePath}.js`);
+};
 
-glob.sync(resolveApp('public/!(_)*.html')).forEach(function(file) {
-    const basename = path.basename(file).replace(/(\.web|\.node)?\.html$/, '');
-
-    if (/\.node\.html$/.test(file)) {
-        nodeHtmlEntries[basename] = file;
-    } else {
-        webHtmlEntries[basename] = file;
-    }
-});
 
 const moduleAlias = Object.assign(
-    glob.sync(`${resolveApp('app/*')}/`).reduce((alias, file) => {
+    glob.sync(`${resolveApp('app/*')}/`).reduce((alias, file) => { // ! 自动处理app下的一级目录别名
         alias[path.basename(file)] = path.resolve(file);
 
         return alias;
     }, {}),
-    lodash.mapValues(pkg.alias, function(relativePath) {
+    lodash.mapValues(pkg.alias, function(relativePath) { // ! 处理pkg中配置的别名
         if (fs.pathExistsSync(resolveApp(relativePath))) {
             return resolveApp(relativePath);
         }
@@ -84,76 +62,45 @@ const moduleAlias = Object.assign(
     })
 );
 
-const useNodeEnv = process.env.SSR !== 'false' && Object.keys(nodeJSEntries).length > 0;
-const appBuildName = process.env.BUILD_DIR || (isDev ? 'buildDev' : 'build');
+// ! 得到 jsEntries htmlEntries 对象
+const jsEntries = {};
+const htmlEntries = {};
+
+glob.sync(resolveApp('app/!(_)*.{j,t}s?(x)')).forEach(function(file) {
+    const basename = path.basename(file).replace(/(\.web)?\.[jt]sx?$/, '');
+    jsEntries[basename] = file;
+});
+
+glob.sync(resolveApp('public/!(_)*.html')).forEach(function(file) {
+    const basename = path.basename(file).replace(/(\.web)?\.html$/, '');
+    htmlEntries[basename] = file;
+});
+
+
 
 module.exports = {
     dotenv: resolveApp('.env'),
     root: resolveApp(''),
-    appBuild: resolveApp(appBuildName),
-    appNodeBuild: resolveApp(appBuildName, 'node'),
+    appPath: resolveApp('.'),
+    appBuild: resolveApp(process.env.BUILD_DIR || 'build'),
     appPublic: resolveApp('public'),
-    appHtml: webHtmlEntries.index || Object.values(webHtmlEntries)[0],
-    appNodeHtml:
-        nodeHtmlEntries.index ||
-        webHtmlEntries.index ||
-        Object.values(nodeHtmlEntries)[0] ||
-        Object.values(webHtmlEntries)[0],
-    appIndexJs: webJSEntries.index || Object.values(webJSEntries)[0],
-    appNodeIndexJs: nodeJSEntries.index || Object.values(nodeJSEntries)[0],
+    appHtml: htmlEntries.index || Object.values(htmlEntries)[0],
+    appIndexJs: jsEntries.index || Object.values(jsEntries)[0],
     appPackageJson: resolveApp('package.json'),
+    // appSrc: resolveApp('src'),
     appSrc: resolveApp('app'),
     appTsConfig: resolveApp('tsconfig.json'),
-    webpackTsConfig: resolveApp('.webpack-tsconfig.json'),
-    staticSrc: resolveApp('static'),
-    locals: resolveApp('locals'),
-    proxySetup: resolveApp('setupProxy.js'),
+    appJsConfig: resolveApp('jsconfig.json'),
+    yarnLockFile: resolveApp('yarn.lock'),
+    // proxySetup: resolveApp('src/setupProxy.js'),
     appNodeModules: resolveApp('node_modules'),
-    ownNodeModules: resolveApp('node_modules'),
-    jestConfigFile: resolveApp('scripts/config/jest.config.js'),
-    nodePaths: nodePaths,
+    // swSrc: resolveModule(resolveApp, 'src/service-worker'),
     publicUrlOrPath,
-    webModuleFileExtensions,
-    nodeModuleFileExtensions,
+    moduleFileExtensions,
     moduleAlias,
     // js entry
-    entries: webJSEntries,
-    nodeEntries: nodeJSEntries,
+    jsEntries,
     // html entry
-    pageEntries: webHtmlEntries,
-    nodePageEntries: nodeHtmlEntries,
-    // 一些命令检测
-    serve: hasInstall('serve'),
-    npmCommander: ['tnpm', 'cnpm', 'npm'].find(hasInstall),
-    useNodeEnv,
-    hasJsxRuntime
+    htmlEntries,
 };
 
-function hasInstall(command) {
-    try {
-        execSync(`${command} --version`, {
-            stdio: 'ignore'
-        });
-
-        return true;
-    } catch (e) {
-        return false;
-    }
-}
-
-const tsconfig = require(module.exports.appTsConfig);
-
-fs.outputJsonSync(
-    module.exports.webpackTsConfig,
-    {
-        extends: './tsconfig.json',
-        compilerOptions: {
-            allowJs: true,
-            checkJs: false
-        },
-        exclude: tsconfig.exclude.concat('setupTests.ts', 'tests', '**/*.test.*', '**/*.spec.*', '**/__tests__')
-    },
-    {
-        spaces: '  '
-    }
-);

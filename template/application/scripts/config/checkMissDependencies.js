@@ -5,7 +5,7 @@ const spawn = require('cross-spawn');
 const chalk = require('chalk');
 const paths = require('./paths');
 
-async function checkMissDeps(spinner) {
+async function checkMissDependencies(spinner) {
     const result = await checkDependencies({
         packageDir: paths.root
     });
@@ -73,4 +73,4 @@ function install(callback) {
     });
 }
 
-module.exports = checkMissDeps;
+module.exports = checkMissDependencies;
