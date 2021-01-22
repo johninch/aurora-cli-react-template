@@ -56,7 +56,7 @@ if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-const spinner = ora('webpack启动中...').start();
+const spinner = ora('启动webpack').start();
 
 // We require that you explicitly set browsers and do not fall back to
 // browserslist defaults.
