@@ -273,8 +273,8 @@ module.exports = function(webpackEnv) {
             {
                 _vendor_: [
                     require.resolve('./polyfills'),
-                    isEnvDevelopment && require.resolve('react-dev-utils/webpackHotDevClient'),
-                    isEnvDevelopment && 'react-hot-loader/patch'
+                    // isEnvDevelopment && require.resolve('react-dev-utils/webpackHotDevClient'),
+                    // isEnvDevelopment && 'react-hot-loader/patch'
                 ].concat(pkg.vendor || []).filter(Boolean)
             },
             paths.jsEntries

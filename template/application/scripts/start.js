@@ -23,7 +23,7 @@ const clearConsole = require('react-dev-utils/clearConsole');
 const ora = require('ora'); // todo
 
 const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
-
+const semver = require('semver');
 const openBrowser = require('react-dev-utils/openBrowser');
 const { checkBrowsers } = require('react-dev-utils/browsersHelper');
 
@@ -40,9 +40,11 @@ const checkMissDependencies = require('./config/checkMissDependencies');
 const createDevServerConfig = require('./config/rewiredWebpackDevServer.config');
 
 const pkg = require(paths.appPackageJson);
+const getClientEnvironment = require('./config/env');
+const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
+const react = require(require.resolve('react', { paths: [paths.appPath] }));
 
 const isInteractive = process.stdout.isTTY;
-
 // Warn and crash if required files are missing
 if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
     // ! 先判断一下我们两个入口文件有没有存在，分别是 project_path/public/index.html 和 project_path/src/index.js，如果不存在给出提示结束程序。
