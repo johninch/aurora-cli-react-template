@@ -9,14 +9,6 @@ const pkg = require(paths.appPackageJson);
 module.exports = {
     overrides: [
         {
-            files: ['**/__tests__/**/*', '**/*.{spec,test}.*'],
-            rules: {
-                'jest/consistent-test-it': [1, { fn: 'test' }],
-                "jest/expect-expect": 1,
-                'jest/no-deprecated-functions': 2,
-            }
-        },
-        {
             files: ['**/*.ts?(x)'],
             /* parserOptions: {
              *     project: paths.appTsConfig,
