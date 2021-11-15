@@ -1,7 +1,4 @@
 import React, { Component } from 'react';
-import withLoadable from 'utils/withLoadable';
-
-const Demo = withLoadable(() => import('../Demo'));
 
 class App extends Component {
     render() {
@@ -13,7 +10,6 @@ class App extends Component {
                         To get started, edit <code>app/index.tsx</code> and save to reload.
                     </p>
                 </blockquote>
-                <Demo />
             </div>
         );
     }
